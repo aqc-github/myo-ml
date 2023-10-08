@@ -1,0 +1,8 @@
+# Ignore specific folders
+/data/dataset-romano/
+/data/datasetESPOL/
+/data/NINAPRO/
+/data/processed_data/
+
+# Ignore all .zip files inside the data directory
+/data/*.zip
