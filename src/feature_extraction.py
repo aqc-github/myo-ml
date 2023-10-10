@@ -21,10 +21,21 @@ log.info("Starting the program ...")
 # INTIALIZE VARIABLES #
 # vector with all .mat files
 path = "data/NINAPRO/MP1/"
-mat_files = ["S106_ex1.mat","S107_ex1.mat","S108_ex1.mat","S109_ex1.mat","S110_ex1.mat","S111_ex1.mat"
-             ,"S112_ex1.mat","S113_ex1.mat","S114_ex1.mat","S115_ex1.mat"] 
 
-#mat_files = ["S010_ex1.mat"] # for testing purposes
+# mat files for all subjects from s010 to s115 
+# mat_files = ["S010_ex1.mat", "S011_ex1.mat", "S012_ex1.mat", "S013_ex1.mat", "S014_ex1.mat", 
+#              "S015_ex1.mat", "S016_ex1.mat", "S017_ex1.mat", "S018_ex1.mat", "S019_ex1.mat", 
+#           "S020_ex1.mat", "S021_ex1.mat", "S022_ex1.mat", "S023_ex1.mat", "S024_ex1.mat", 
+ #            "S025_ex1.mat", "S026_ex1.mat", "S027_ex1.mat", "S028_ex1.mat", "S029_ex1.mat", 
+  #           "S030_ex1.mat", "S031_ex1.mat", "S032_ex1.mat", "S033_ex1.mat", "S034_ex1.mat", 
+   #          "S035_ex1.mat", "S036_ex1.mat", "S037_ex1.mat", "S038_ex1.mat", "S039_ex1.mat", 
+    #         "S040_ex1.mat", "S101_ex1.mat", "S102_ex1.mat", "S103_ex1.mat", "S104_ex1.mat", 
+     #        "S105_ex1.mat", "S106_ex1.mat", "S107_ex1.mat", "S108_ex1.mat", "S109_ex1.mat",
+      #       "S110_ex1.mat", "S111_ex1.mat", "S112_ex1.mat", "S113_ex1.mat", "S114_ex1.mat","S115_ex1.mat"]
+# mat_files = ["S108_ex1.mat", "S109_ex1.mat",
+#             "S110_ex1.mat", "S111_ex1.mat", "S112_ex1.mat", "S113_ex1.mat", "S114_ex1.mat","S115_ex1.mat"]
+             
+mat_files = ["S010_ex1.mat"] # for testing purposes
 
 # initialize variables
 time_window = 100 # 100 ms
@@ -50,7 +61,6 @@ def extract_data(mat_file):
     # extract grasp abels from .mat file
     grasp = mat["grasp"]
 
-    
     return emg, ts, grasp
 
 
@@ -86,60 +96,63 @@ def extract_features_from_window(window):
     for i in range(12):
 
 
-        # Time domain features
+         # Time domain features
         # Mean Absolute Value (MAV)
-        features[f"MAV{i}"] = np.mean(np.abs(window[i, :]))
+        features[f"MAV{i}"] = np.mean(np.abs(window[:, i]))
         # Zero Crossing (ZC)
-        features[f"ZC{i}"] = np.sum(np.abs(np.diff(np.sign(window[i, :])))) / (2 * window.shape[1])
+        features[f"ZC{i}"] = np.sum(np.abs(np.diff(np.sign(window[:, i])))) / (2 * window.shape[0])
         # Slope Sign Change (SSC)
-        features[f"SSC{i}"] = np.sum(np.diff(np.sign(np.diff(window[i, :])) != 0)) / window.shape[1]
+        features[f"SSC{i}"] = np.sum(np.diff(np.sign(np.diff(window[:, i]))) != 0) / window.shape[0]
         # Waveform Length (WL)
-        features[f"WL{i}"] = np.sum(np.abs(np.diff(window[i, :]))) / window.shape[1]
+        features[f"WL{i}"] = np.sum(np.abs(np.diff(window[:, i]))) / window.shape[0]
         # Root Mean Square (RMS)
-        features[f"RMS{i}"] = np.sqrt(np.mean(np.square(window[i, :])))
+        features[f"RMS{i}"] = np.sqrt(np.mean(np.square(window[:, i])))
         # Variance (VAR)
-        features[f"VAR{i}"] = np.var(window[i, :])
+        features[f"VAR{i}"] = np.var(window[:, i])
         # Log Detector (LOG)
-        epsilon = 1e-10  # A small constant to avoid log(0)
-        features[f"LOG{i}"] = np.exp(np.mean(np.log(np.abs(window[i, :]) + epsilon)))
+        epsilon = 1e-10
+        features[f"LOG{i}"] = np.exp(np.mean(np.log(np.abs(window[:, i]) + epsilon)))
         # Integrated EMG (IEMG)
-        features[f"IEMG{i}"] = np.sum(np.abs(window[i, :]))
+        features[f"IEMG{i}"] = np.sum(np.abs(window[:, i]))
 
+        # Frequency domain features (assuming FFT is applicable)
+        # The actual frequencies will depend on the sampling rate and window length
+        fft_vals = np.fft.rfft(window[:, i])
+        fft_freqs = np.fft.rfftfreq(window.shape[0])
 
-        # Frequency domain features
         # Mean Frequency (MNF)
-        features[f"MNF{i}"] = np.sum(np.abs(window[i, :]) * np.arange(window.shape[1])) / np.sum(np.abs(window[i, :]))
+        features[f"MNF_real{i}"] = np.sum(np.abs(fft_vals.real) * fft_freqs) / np.sum(np.abs(fft_vals.real))
+        features[f"MNF_imag{i}"] = np.sum(np.abs(fft_vals.imag) * fft_freqs) / np.sum(np.abs(fft_vals.imag))
         # Median Frequency (MDF)
-        features[f"MDF{i}"] = np.median(np.abs(window[i, :]) * np.arange(window.shape[1])) / np.median(np.abs(window[i, :]))
+        features[f"MDF_real{i}"] = np.median(np.abs(fft_vals.real) * fft_freqs) / np.median(np.abs(fft_vals.real))
+        features[f"MDF_imag{i}"] = np.median(np.abs(fft_vals.imag) * fft_freqs) / np.median(np.abs(fft_vals.imag))
         # Mean Power Frequency (MPF)
-        features[f"MPF{i}"] = np.sum(np.square(np.abs(window[i, :])) * np.arange(window.shape[1])) / np.sum(np.square(np.abs(window[i, :])))
-        # Peak Frequency (PF)
-        if np.any(window[i, :]):
-            features[f"PF{i}"] = np.argmax(np.abs(window[i, :])) / window.shape[1]
-        else:
-            features[f"PF{i}"] = 0  # Assign a default value or handle it according to your requirements
-        # Frequency Variance (FV)
-        features[f"FV{i}"] = np.sum(np.square(np.abs(window[i, :]) - features[f"MNF{i}"]) * np.arange(window.shape[1])) / np.sum(np.square(np.abs(window[i, :])))
-        # Maximum Frequency (MAXF) - Handle empty sequences
-        if np.any(window[i, :]):
-            features[f"MAXF{i}"] = np.max(np.abs(window[i, :])) / window.shape[1]
-        else:
-            features[f"MAXF{i}"] = 0  # Assign a default value or handle it according to your requirements
-        # Minimum Frequency (MINF)
-        if np.any(window[i, :]):
-            features[f"MINF{i}"] = np.min(np.abs(window[i, :])) / window.shape[1]
-        else:
-            features[f"MINF{i}"] = 0  # Assign a default value or handle it according to your requirements
+        features[f"MPF_real{i}"] = np.sum(np.square(np.abs(fft_vals.real)) * fft_freqs) / np.sum(np.square(np.abs(fft_vals.real)))
+        features[f"MPF_imag{i}"] = np.sum(np.square(np.abs(fft_vals.imag)) * fft_freqs) / np.sum(np.square(np.abs(fft_vals.imag)))
+        # Note: Peak Frequency (PF) depends on the magnitude and not directly on fft_vals, so it remains unchanged.
+        features[f"PF{i}"] = fft_freqs[np.argmax(np.abs(fft_vals))]
+        # Frequency Variance (FV) - Here, it's important to note that MNF is separated into real and imaginary. 
+        # You might want to recompute it inside this block to maintain clarity.
+        features[f"FV_real{i}"] = np.sum(np.square(np.abs(fft_vals.real) - features[f"MNF_real{i}"]) * fft_freqs) / np.sum(np.square(np.abs(fft_vals.real)))
+        features[f"FV_imag{i}"] = np.sum(np.square(np.abs(fft_vals.imag) - features[f"MNF_imag{i}"]) * fft_freqs) / np.sum(np.square(np.abs(fft_vals.imag)))
+        # Max and Min frequencies remain unchanged as they are based on magnitudes.
+        features[f"MAXF{i}"] = fft_freqs[np.argmax(np.abs(fft_vals))]
+        features[f"MINF{i}"] = fft_freqs[np.argmin(np.abs(fft_vals))]
         # Standard Deviation Frequency (SDF)
-        features[f"SDF{i}"] = np.std(np.abs(window[i, :])) / window.shape[1]
-        # Skewness Frequency (SKF)
-        features[f"SKF{i}"] = np.sum(np.power(np.abs(window[i, :]) - features[f"MNF{i}"], 3) * np.arange(window.shape[1])) / np.sum(np.power(np.abs(window[i, :]) - features[f"MNF{i}"], 3))
-        # Kurtosis Frequency (KUF)
-        features[f"KUF{i}"] = np.sum(np.power(np.abs(window[i, :]) - features[f"MNF{i}"], 4) * np.arange(window.shape[1])) / np.sum(np.power(np.abs(window[i, :]) - features[f"MNF{i}"], 4))
+        features[f"SDF_real{i}"] = np.std(fft_vals.real)
+        features[f"SDF_imag{i}"] = np.std(fft_vals.imag)
+        # Skewness and Kurtosis Frequency
+        features[f"SKF_real{i}"] = np.sum(np.power(np.abs(fft_vals.real) - features[f"MNF_real{i}"], 3) * fft_freqs) / np.sum(np.power(np.abs(fft_vals.real) - features[f"MNF_real{i}"], 3))
+        features[f"SKF_imag{i}"] = np.sum(np.power(np.abs(fft_vals.imag) - features[f"MNF_imag{i}"], 3) * fft_freqs) / np.sum(np.power(np.abs(fft_vals.imag) - features[f"MNF_imag{i}"], 3))
+        features[f"KUF_real{i}"] = np.sum(np.power(np.abs(fft_vals.real) - features[f"MNF_real{i}"], 4) * fft_freqs) / np.sum(np.power(np.abs(fft_vals.real) - features[f"MNF_real{i}"], 4))
+        features[f"KUF_imag{i}"] = np.sum(np.power(np.abs(fft_vals.imag) - features[f"MNF_imag{i}"], 4) * fft_freqs) / np.sum(np.power(np.abs(fft_vals.imag) - features[f"MNF_imag{i}"], 4))
         # Maximum Power Spectral Density (MAXPSD)
-        features[f"MAXPSD{i}"] = np.max(np.square(np.abs(window[i, :]))) / window.shape[1]
+        features[f"MAXPSD{i}_real"] = np.max(np.square(fft_vals.real))
+        features[f"MAXPSD{i}_imag"] = np.max(np.square(fft_vals.imag))
+
         # Minimum Power Spectral Density (MINPSD)
-        features[f"MINPSD{i}"] = np.min(np.square(np.abs(window[i, :]))) / window.shape[1]
+        features[f"MINPSD{i}_real"] = np.min(np.square(fft_vals.real))
+        features[f"MINPSD{i}_imag"] = np.min(np.square(fft_vals.imag))
 
     # transform dictionary into pandas dataframe keeping the order of the keys and names
     # of the columns
@@ -178,10 +191,15 @@ def extract_features(mat_file, window_size, window_overlap):
         # extract features
         features = extract_features_from_window(window)
         # add an additional feature to the dataframe: the timestamp of the window
-        features["ts"] = window[12, 0]
+        features["ts"] = np.mean(window[:, 12])
         # add an additional feature to the dataframe: the grasp label of the window
-        features["grasp"] = window[12, 1]
+        features["grasp"] = round(np.mean(window[:, -1]))
 
+        # log both features for debugging, ts and grasp label
+        # log.debug(f"Features: {features}")
+        # log.debug(f"ts: {features['ts']}")
+        # log.debug(f"grasp: {features['grasp']}")
+        
         # Append the features of this window to the accumulated DataFrame
         allfeatures = pd.concat([allfeatures, features], axis=0, ignore_index=True)
 
