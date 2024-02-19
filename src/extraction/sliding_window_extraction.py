@@ -20,7 +20,7 @@ log.info("Starting the program ...")
 
 # INTIALIZE VARIABLES #
 # vector with all .mat files
-path = "data/NINAPRO/MP1/"
+path = "data/"
 
 # mat files for all subjects from s010 to s115 
 # mat_files = ["S010_ex1.mat", "S011_ex1.mat", "S012_ex1.mat", "S013_ex1.mat", "S014_ex1.mat", 
@@ -38,7 +38,7 @@ path = "data/NINAPRO/MP1/"
 mat_files = ["S010_ex1.mat"] # for testing purposes
 
 # initialize variables
-time_window = 100 # 100 ms
+time_window = 2000 # 100 ms
 sample_rate = 1926 # 1926 Hz
 window_size: int = time_window * sample_rate / 1000 # 192.6 samples (round to 192)
 window_overlap = 0.2 # 20% overlap, 38.4 samples (round to 38)
@@ -62,6 +62,35 @@ def extract_data(mat_file):
     grasp = mat["grasp"]
 
     return emg, ts, grasp
+
+# Function to classify the grasp label for a window of data, prioritizing active states.
+def classify_grasp_label(window):
+    """
+    Classify the grasp label for a window of data, prioritizing active states.
+    
+    Args:
+    window (array-like): A window of data containing grasp labels.
+    
+    Returns:
+    int: The classified grasp label.
+    """
+    # Convert the window to a list of labels
+    labels = list(window)
+
+    # Filter out the neutral state (assuming it's represented by 0)
+    active_labels = [label for label in labels if label != 0]
+
+    if active_labels:
+        # If there are active labels, prioritize them
+        # Option 1: Return the most frequent active label
+        most_frequent_label = max(set(active_labels), key=active_labels.count)
+        return most_frequent_label
+
+        # Option 2: Return the active label with the highest value
+        # return max(active_labels)
+    else:
+        # If there are no active labels, return the neutral state
+        return 0
 
 
 
@@ -193,7 +222,7 @@ def extract_features(mat_file, window_size, window_overlap):
         # add an additional feature to the dataframe: the timestamp of the window
         features["ts"] = np.mean(window[:, 12])
         # add an additional feature to the dataframe: the grasp label of the window
-        features["grasp"] = round(np.mean(window[:, -1]))
+        features["grasp"] = classify_grasp_label(window[:, -1])
 
         # log both features for debugging, ts and grasp label
         # log.debug(f"Features: {features}")
@@ -216,9 +245,12 @@ def extract_features(mat_file, window_size, window_overlap):
 # into a .csv file
 def save_subject_data(subject_data, subject_id):
     # save data into .csv file
-    subject_data.to_csv(f"data/processed_data/subject_{subject_id}.csv", index=False)
+    subject_data.to_csv(f"data/subject_{subject_id}_2000ms.csv", index=False)
     # log progress
     log.info(f"Data from subject {subject_id} saved", extra={"markup": True})
+
+
+
 
 
 

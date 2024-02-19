@@ -6,6 +6,10 @@
 
 # Ignore all .zip files inside the data directory
 /data/*.zip
+# ignore all .csv, .mat and .pt files inside the data directory
+/data/*.csv
+/data/*.mat
+/data/*.pt
 
 # Ignore all __pycache__ folders in all subdirectories
 **/__pycache__/
